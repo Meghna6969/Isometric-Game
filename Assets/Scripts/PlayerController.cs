@@ -4,13 +4,21 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
+    [Header("Movement")]
     [SerializeField] private Rigidbody rb;
     [SerializeField] private float speed = 5;
+    [SerializeField] private float sprintMultiplier = 1.5f;
+    [SerializeField] private float acceleration = 10f;
+    [SerializeField] private float deceleration = 15f;
     [SerializeField] private float turnSpeed = 360;
+
+    [Header("Jump and Dash")]
     [SerializeField] private float jumpForce = 5;
     [SerializeField] private float dashSpeed = 15;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
+
+    [Header("Ground Check and Other Misc")]
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
@@ -20,6 +28,11 @@ public class PlayerController : MonoBehaviour
     private bool isDashing;
     private float dashTimer;
     private float dashCooldownTimer;
+    private Vector3 dashDirection;
+
+    private float currentSpeed;
+    private Vector3 currentVelocity;
+
     void OnMove(InputValue value)
     {
         Vector2 inputVector = value.Get<Vector2>();
@@ -39,6 +52,8 @@ public class PlayerController : MonoBehaviour
             isDashing = true;
             dashTimer = dashDuration;
             dashCooldownTimer = dashCooldown;
+            var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
+            dashDirection = matrix.MultiplyPoint3x4(input).normalized;
         }
     }
     void FixedUpdate()
@@ -49,7 +64,10 @@ public class PlayerController : MonoBehaviour
     }
     void Update()
     {
-        Look();
+        if (!isDashing)
+        {
+            Look();
+        }
         Dash();
     }
     void Dash()
@@ -73,19 +91,46 @@ public class PlayerController : MonoBehaviour
         {
             var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
             var skewedInput = matrix.MultiplyPoint3x4(input);
-            var relative = (transform.position + skewedInput) - transform.position;
-            var rot = Quaternion.LookRotation(relative, Vector3.up);
 
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, rot, turnSpeed * Time.deltaTime);
+           var targetRotation = Quaternion.LookRotation(skewedInput, Vector3.up);
+           transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, turnSpeed * Time.deltaTime);
         }
 
 
     }
     void Move()
     {
-        if(input != Vector3.zero)
+        if (isDashing)
         {
-            rb.MovePosition(transform.position + transform.forward * speed * Time.deltaTime);
+            rb.MovePosition(transform.position + dashDirection * dashSpeed * Time.deltaTime);
+            currentSpeed = dashSpeed;
+        }else
+        {
+            bool isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+            float targetSpeed;
+
+            if (input != Vector3.zero)
+            {
+                targetSpeed = isSprinting ? speed * sprintMultiplier : speed;
+                currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, acceleration * Time.deltaTime);
+                
+                var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
+                var moveDirection = matrix.MultiplyPoint3x4(input).normalized;
+
+                currentVelocity = Vector3.Lerp(currentVelocity, moveDirection * currentSpeed, acceleration * Time.deltaTime);
+
+                rb.MovePosition(transform.position + currentVelocity * Time.deltaTime);
+            }
+            else
+            {
+                currentSpeed = Mathf.Lerp(currentSpeed, 0, deceleration * Time.deltaTime);
+                currentVelocity = Vector3.Lerp(currentVelocity, Vector3.zero, deceleration * Time.deltaTime);
+
+                if(currentSpeed > 0.01f)
+                {
+                    rb.MovePosition(transform.position + currentVelocity * Time.deltaTime);
+                }
+            }
         }
        
     }
