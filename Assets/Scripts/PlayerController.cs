@@ -11,9 +11,15 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float acceleration = 10f;
     [SerializeField] private float deceleration = 15f;
     [SerializeField] private float turnSpeed = 360;
+        [SerializeField] private float airControlMultiplier = 0.5f;
 
     [Header("Jump and Dash")]
     [SerializeField] private float jumpForce = 5;
+    [SerializeField] private float jumpCutMultiplier = 0.5f;
+    [SerializeField] private float jumpBufferTime = 0.2f;
+    [SerializeField] private float coyoteTime = 0.15f;
+    [SerializeField] private float fallMultiplier = 2.5f;
+    [SerializeField] private float lowJumpMultiplier = 2f;
     [SerializeField] private float dashSpeed = 15;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
@@ -25,13 +31,20 @@ public class PlayerController : MonoBehaviour
 
     private Vector3 input;
     private bool isGrounded;
+    private bool wasGrounded;
     private bool isDashing;
     private float dashTimer;
     private float dashCooldownTimer;
     private Vector3 dashDirection;
 
+
     private float currentSpeed;
     private Vector3 currentVelocity;
+
+    private float jumpBufferCounter;
+    private float coyoteTimeCounter;
+    private bool isJumping;
+    private bool jumpInputReleased = true;
 
     void OnMove(InputValue value)
     {
@@ -40,9 +53,18 @@ public class PlayerController : MonoBehaviour
     }
     void OnJump(InputValue value)
     {
-        if(isGrounded && !isDashing)
+        if (value.isPressed)
         {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+            jumpBufferCounter = jumpBufferTime;
+            jumpInputReleased = false;
+        }
+        else
+        {
+            jumpInputReleased = true;
+            if(rb.linearVelocity.y > 0 && isJumping)
+            {
+                rb.linearVelocity = new Vector3(rb.linearVelocity.x, rb.linearVelocity.y * jumpCutMultiplier, rb.linearVelocity.z); 
+            }
         }
     }
     void OnDash(InputValue value)
@@ -58,8 +80,14 @@ public class PlayerController : MonoBehaviour
     }
     void FixedUpdate()
     {
-        // Check Ground
+        wasGrounded = isGrounded;
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
+        if(!wasGrounded && isGrounded)
+        {
+            isJumping = false;
+        }
+        HandleJumpBetter();
+        ApplyMyGravity();
         Move();
     }
     void Update()
@@ -69,6 +97,45 @@ public class PlayerController : MonoBehaviour
             Look();
         }
         Dash();
+        UpdateJumpingTimers();
+    }
+    void UpdateJumpingTimers()
+    {
+        if(jumpBufferCounter > 0)
+        {
+            jumpBufferCounter -= Time.deltaTime;
+        }
+        if (isGrounded)
+        {
+            coyoteTimeCounter = coyoteTime;
+        }
+        else
+        {
+            coyoteTimeCounter -= Time.deltaTime;
+        }
+    }
+    void HandleJumpBetter()
+    {
+        bool canJump = (isGrounded || coyoteTimeCounter > 0) && !isDashing && !isJumping;
+        if(jumpBufferCounter > 0 && canJump)
+        {
+            isJumping = true;
+            jumpBufferCounter = 0;
+            coyoteTimeCounter = 0;
+
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z);
+            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
+        }
+    }
+    void ApplyMyGravity()
+    {
+        if(rb.linearVelocity.y < 0)
+        {
+            rb.linearVelocity += Vector3.up * Physics.gravity.y * (fallMultiplier - 1) * Time.fixedDeltaTime;
+        } else if(rb.linearVelocity.y > 0 && jumpInputReleased)
+        {
+            rb.linearVelocity += Vector3.up * Physics.gravity.y * (lowJumpMultiplier - 1) * Time.fixedDeltaTime;
+        }
     }
     void Dash()
     {
@@ -109,22 +176,25 @@ public class PlayerController : MonoBehaviour
             bool isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
             float targetSpeed;
 
+            float currentAcceleration = isGrounded ? acceleration : acceleration * airControlMultiplier;
+            float currentDecelearation = isGrounded ? deceleration : deceleration * airControlMultiplier;
+
             if (input != Vector3.zero)
             {
                 targetSpeed = isSprinting ? speed * sprintMultiplier : speed;
-                currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, acceleration * Time.deltaTime);
+                currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, currentAcceleration * Time.deltaTime);
                 
                 var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 45, 0));
                 var moveDirection = matrix.MultiplyPoint3x4(input).normalized;
 
-                currentVelocity = Vector3.Lerp(currentVelocity, moveDirection * currentSpeed, acceleration * Time.deltaTime);
+                currentVelocity = Vector3.Lerp(currentVelocity, moveDirection * currentSpeed, currentAcceleration * Time.deltaTime);
 
                 rb.MovePosition(transform.position + currentVelocity * Time.deltaTime);
             }
             else
             {
-                currentSpeed = Mathf.Lerp(currentSpeed, 0, deceleration * Time.deltaTime);
-                currentVelocity = Vector3.Lerp(currentVelocity, Vector3.zero, deceleration * Time.deltaTime);
+                currentSpeed = Mathf.Lerp(currentSpeed, 0, currentDecelearation * Time.deltaTime);
+                currentVelocity = Vector3.Lerp(currentVelocity, Vector3.zero, currentDecelearation * Time.deltaTime);
 
                 if(currentSpeed > 0.01f)
                 {
