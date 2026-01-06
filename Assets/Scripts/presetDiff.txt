@@ -12,3 +12,23 @@ preset 8 - Sluggist kinda feel 4/10
 4 - abs mad kinda feeling with this preset very very fast like hyperactive - 5/10
 8 - quick snappy but still not what I am looking for - 5/10
 9 - too fast for no reason kinda sucks - 4/10
+10 - alright kinda still nothing too different but ok balanced with everything - 7/10
+11 - vERY INTERESTING AND KINda good very good for battle
+
+
+Final settings
+Speed: 5.7
+Spring Multiplier: 1.6
+Acceleration: 30
+Deceleration: 25
+Turn Speed: 1080
+Air Control Multiplier: 0.4
+Jump Force: 7;
+Jump Cut Multiplier: 0.3
+Jump Buffer Time: 0.2
+Coyote Time: 0.13
+Fall Multiplier: 4.2
+Low Jump Multiplier: 3.8
+Dash Speed: 20
+Dash Duration: 0.1
+Dash Cooldown: 0.7

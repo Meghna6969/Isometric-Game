@@ -11,7 +11,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float acceleration = 10f;
     [SerializeField] private float deceleration = 15f;
     [SerializeField] private float turnSpeed = 360;
-        [SerializeField] private float airControlMultiplier = 0.5f;
+    [SerializeField] private float airControlMultiplier = 0.5f;
 
     [Header("Jump and Dash")]
     [SerializeField] private float jumpForce = 5;
@@ -29,6 +29,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
 
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+
     private Vector3 input;
     private bool isGrounded;
     private bool wasGrounded;
@@ -36,7 +39,6 @@ public class PlayerController : MonoBehaviour
     private float dashTimer;
     private float dashCooldownTimer;
     private Vector3 dashDirection;
-
 
     private float currentSpeed;
     private Vector3 currentVelocity;
@@ -98,6 +100,39 @@ public class PlayerController : MonoBehaviour
         }
         Dash();
         UpdateJumpingTimers();
+        UpdateAnimations();
+    }
+    void UpdateAnimations()
+    {
+        if(animator == null) return;
+        bool isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        bool isMoving = input != Vector3.zero;
+
+        animator.SetBool("isIdle", false);
+        animator.SetBool("isWalk", false);
+        animator.SetBool("isRunning", false);
+        animator.SetBool("isJumping", false);
+        animator.SetBool("isDashing", false);
+
+        if (isDashing)
+        {
+            animator.SetBool("isDashing", true);
+        }
+        else if(isJumping || !isGrounded)
+        {
+            animator.SetBool("isJumping", true);
+        }
+        else if(isMoving && isSprinting)
+        {
+            animator.SetBool("isRunning", true);
+        } else if (isMoving)
+        {
+            animator.SetBool("isWalk", true);
+        }
+        else
+        {
+            animator.SetBool("isIdle", true);
+        }
     }
     void UpdateJumpingTimers()
     {
