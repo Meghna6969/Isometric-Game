@@ -114,13 +114,13 @@ public class PlayerController : MonoBehaviour
         animator.SetBool("isJumping", false);
         animator.SetBool("isDashing", false);
 
-        if (isDashing)
-        {
-            animator.SetBool("isDashing", true);
-        }
-        else if(isJumping || !isGrounded)
+        if (isJumping || !isGrounded)
         {
             animator.SetBool("isJumping", true);
+        }
+        else if (isDashing)
+        {
+            animator.SetBool("isDashing", true);
         }
         else if(isMoving && isSprinting)
         {
