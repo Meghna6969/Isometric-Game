@@ -84,7 +84,7 @@ public class PlayerController : MonoBehaviour
     {
         wasGrounded = isGrounded;
         isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
-        if(!wasGrounded && isGrounded)
+        if(isGrounded)
         {
             isJumping = false;
         }

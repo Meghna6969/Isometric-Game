@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerInteractionInput : MonoBehaviour
 {
@@ -8,13 +9,9 @@ public class PlayerInteractionInput : MonoBehaviour
     {
         Instance = this;
     }
-    void OnInteract()
-    {
-        current?.Interact(gameObject);
-    }
     void Update()
     {
-        if(current != null && Input.GetKeyDown(KeyCode.F))
+        if(current != null && Keyboard.current.fKey.wasPressedThisFrame)
         {
             current.Interact(gameObject);
         }
