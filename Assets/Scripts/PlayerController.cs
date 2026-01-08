@@ -1,3 +1,4 @@
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -12,6 +13,13 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float deceleration = 15f;
     [SerializeField] private float turnSpeed = 360;
     [SerializeField] private float airControlMultiplier = 0.5f;
+
+    [Header("Noise")]
+    [SerializeField] private float walkNoiseRadius;
+    [SerializeField] private float walkNoiseIntensity;
+    [SerializeField] private float noiseDuration = 2f;
+    [SerializeField] private float runNoiseInterval = 2f;
+    private float lastWalkNoiseTime;
 
     [Header("Jump and Dash")]
     [SerializeField] private float jumpForce = 5;
@@ -28,6 +36,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private LayerMask groundLayer;
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
+
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip runningSound;
+
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -101,6 +114,7 @@ public class PlayerController : MonoBehaviour
         Dash();
         UpdateJumpingTimers();
         UpdateAnimations();
+        HandleSounds();
     }
     void UpdateAnimations()
     {
@@ -124,6 +138,10 @@ public class PlayerController : MonoBehaviour
         }
         else if(isMoving && isSprinting)
         {
+            if(Time.time - lastWalkNoiseTime >= runNoiseInterval)
+            {
+                NoiseManager.Instance.MakeNoise(transform.position, walkNoiseIntensity, walkNoiseRadius, noiseDuration);
+            }
             animator.SetBool("isRunning", true);
         } else if (isMoving)
         {
@@ -238,5 +256,29 @@ public class PlayerController : MonoBehaviour
             }
         }
        
+    }
+    private void HandleSounds()
+    {
+        if(audioSource == null || runningSound == null) Debug.LogError("PlayerController: No audio source");
+         bool isSprinting = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
+        bool isMoving = input != Vector3.zero;
+        bool shouldPlaySound = isGrounded && isMoving && isSprinting && !isDashing;
+
+        if (shouldPlaySound)
+        {
+            if (!audioSource.isPlaying)
+            {
+                audioSource.clip = runningSound;
+                audioSource.loop = true;
+                audioSource.Play();
+            }
+        }
+        else
+        {
+            if (audioSource.isPlaying)
+            {
+                audioSource.Stop();
+            }
+        }
     }
 }

@@ -1,7 +1,6 @@
-using Unity.VisualScripting;
-using UnityEditorInternal;
 using UnityEngine;
 using UnityEngine.AI;
+using System.Collections;
 
 public class DogEnemy : MonoBehaviour
 {
@@ -29,6 +28,7 @@ public class DogEnemy : MonoBehaviour
     [SerializeField] private float proximitySenseRadius = 2.5f;
     [SerializeField] private float maxSleepDuration = 15f;
     [SerializeField] private float sleepChance = 0.7f;
+    [SerializeField] private float stopDistancePlayer = 1.5f;
 
     [Header("Idle Behavior")]
     [SerializeField] private float idleChanceWhileWalking = 0.3f;
@@ -43,6 +43,11 @@ public class DogEnemy : MonoBehaviour
     [SerializeField] private float investigationThreshold = 30f;
     [SerializeField] private float investigationSpeed = 3.5f;
     [SerializeField] private float investigationWaitTime = 4f;
+
+    [Header("Audio and Sound")]
+    [SerializeField] private AudioSource dogAudioSource;
+    [SerializeField] private AudioClip barkSound;
+
     
     // Increased chance of waking up when the player is near 
     // but not so near that is makes the dog wake up in the first place
@@ -196,6 +201,24 @@ public class DogEnemy : MonoBehaviour
             Debug.LogError("DogEnemy: THERE IS NO PLAYER");
         }
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        if(distanceToPlayer <= stopDistancePlayer)
+        {
+            agent.isStopped = true;
+            SetAnimation("isIdle", true);
+
+            if(Time.time - lastBarkTime >= barkInterval)
+            {
+                Bark();
+                lastBarkTime = Time.time;
+            }
+            return;
+        }
+        if(agent.isStopped && distanceToPlayer > stopDistancePlayer)
+        {
+            agent.isStopped = false;
+            SetAnimation("isRun", true);
+        }
 
         if(distanceToPlayer > chaseRadius)
         {
@@ -372,7 +395,25 @@ public class DogEnemy : MonoBehaviour
     {
         if(NoiseManager.Instance != null)
         {
+            int barkCount = Random.Range(1, 4);
+            StartCoroutine(PlayBarkSound(barkCount));
+            
             NoiseManager.Instance.MakeNoise(transform.position, barkNoiseIntensity, barkNoiseRadius, 2f);
+        }
+    }
+    private IEnumerator PlayBarkSound(int count)
+    {
+        for(int i = 0; i < count; i++)
+        {
+            dogAudioSource.clip = barkSound;
+            dogAudioSource.playOnAwake = false;
+            dogAudioSource.pitch = Random.Range(0.7f, 1.2f);
+            dogAudioSource.PlayOneShot(barkSound);
+
+            if(i < count - 1)
+            {
+                yield return new WaitForSeconds(Random.Range(0.2f, 0.5f));
+            }
         }
     }
     private void SetAnimation(string paramName, bool value)
@@ -400,6 +441,9 @@ public class DogEnemy : MonoBehaviour
 
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(sleepPos, wanderRadius);
+
+        Gizmos.color = Color.black;
+        Gizmos.DrawWireSphere(transform.position, proximitySenseRadius);
         Gizmos.color = Color.magenta;
         Gizmos.DrawWireSphere(transform.position, hearingRadius);
 
