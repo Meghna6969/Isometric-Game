@@ -11,12 +11,14 @@ public class DogEnemy : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private NavMeshAgent agent;
     [SerializeField] private Transform player;
+    [SerializeField] private LayerMask detectionMask;
 
     [Header("Detection Spheres")]
     [SerializeField] private float sleepDetectionRadius = 3f;
     [SerializeField] private float walkDetectionRadius = 8f;
     [SerializeField] private float chaseRadius = 10f;
     [SerializeField] private float barkNoiseRadius = 10f;
+    [SerializeField] private float hearingRadius = 20f;
 
     [Header("Movement and Odds")]
     [SerializeField] private float walkSpeed = 2f;
@@ -24,6 +26,7 @@ public class DogEnemy : MonoBehaviour
     [SerializeField] private float wanderRadius = 10f;
     [SerializeField] private Vector3 sleepSpotOffset = Vector3.zero;
     [SerializeField] private float minSleepDuration = 5f;
+    [SerializeField] private float proximitySenseRadius = 2.5f;
     [SerializeField] private float maxSleepDuration = 15f;
     [SerializeField] private float sleepChance = 0.7f;
 
@@ -35,6 +38,11 @@ public class DogEnemy : MonoBehaviour
     [Header("Chase Behavior")]
     [SerializeField] private float barkInterval = 5f;
     [SerializeField] private float barkNoiseIntensity = 70f;
+
+    [Header("Investigation Behavior")]
+    [SerializeField] private float investigationThreshold = 30f;
+    [SerializeField] private float investigationSpeed = 3.5f;
+    [SerializeField] private float investigationWaitTime = 4f;
     
     // Increased chance of waking up when the player is near 
     // but not so near that is makes the dog wake up in the first place
@@ -50,13 +58,17 @@ public class DogEnemy : MonoBehaviour
     private Vector3 currentWanderTarget;
     private float targetStateDuration;
 
+    private float proximityCheckTimer;
+    private Vector3 noiseInvestigationTarget;
+
     private enum DogState
     {
         Sleeping,
         Idle,
         Walking,
         Chasing,
-        ReturningToSleep
+        ReturningToSleep,
+        Investigating
     }
 
     private void Start()
@@ -65,6 +77,10 @@ public class DogEnemy : MonoBehaviour
         if(agent == null || animator == null)
         {
             Debug.LogError("DogEnemy: Animator or Agent not found");
+        }
+        if(detectionMask == 0)
+        {
+            detectionMask = Physics.DefaultRaycastLayers;
         }
         TransitionToState(DogState.Sleeping);
     }
@@ -90,28 +106,38 @@ public class DogEnemy : MonoBehaviour
             case DogState.ReturningToSleep:
                 UpdateReturningToSleep();
                 break;
+            case DogState.Investigating:
+                UpdateInvestigating();
+                break;
         }
         if(currentState != DogState.Chasing)
         {
             CheckForPlayer();
+            // Gotta get the global noise value for this function so lets keep that in there
+            // But Noise is one factor only, the dog can walk up even if the player is near it
+            CheckForNoise();
         }
 
-        // Gotta get the global noise value for this function so lets keep that in there
-        // But Noise is one factor only, the dog can walk up even if the player is near it
-        CheckForNoise();
+        
 
     }
     private void UpdateSleeping()
     {
-        if(enableProximityWakeup && player != null)
+        if(enableProximityWakeup)
         {
             float distanceToPlayer = Vector3.Distance(transform.position, player.position);
             if(distanceToPlayer <= proximityWakeupRadius && distanceToPlayer > sleepDetectionRadius)
             {
-                if(Random.value < proximityWakeupChance * Time.deltaTime)
+                proximityCheckTimer += Time.deltaTime;
+
+                if(proximityCheckTimer >= 1f)
                 {
-                    TransitionToState(DogState.Idle);
-                    return;
+                    proximityCheckTimer = 0f;
+                    if(Random.value < proximityWakeupChance)
+                    {
+                        TransitionToState(DogState.Idle);
+                        return;
+                    }
                 }
             }
         }
@@ -119,9 +145,13 @@ public class DogEnemy : MonoBehaviour
         // This for the random waking up during the night
         if(stateTimer >= targetStateDuration)
         {
-            if(Random.value < 0.1f * Time.deltaTime)
+            if(Random.value < 0.1f)
             {
                 TransitionToState(DogState.Idle);
+            }
+            else
+            {
+                stateTimer = 0;
             }
         }
     }
@@ -187,17 +217,31 @@ public class DogEnemy : MonoBehaviour
             TransitionToState(DogState.Sleeping);
         }
     }
+    private void UpdateInvestigating()
+    {
+        if(!agent.pathPending && agent.remainingDistance <= agent.stoppingDistance)
+        {
+            if (!animator.GetBool("isIdle"))
+            {
+                animator.SetBool("isWalk", false);
+                animator.SetBool("isRun", false);
+                animator.SetBool("isIdle", true);
+            }
+            if(stateTimer >= investigationWaitTime)
+            {
+                TransitionToState(DogState.Walking);
+            }
+        }
+    }
     private void TransitionToState(DogState newState)
     {
-        switch (currentState)
+        if(currentState == DogState.Sleeping)
         {
-            case DogState.Sleeping:
-                agent.isStopped = false;
-                break;
+            agent.isStopped = false;
         }
-
         currentState = newState;
         stateTimer = 0f;
+        proximityCheckTimer = 0f;
 
         switch (newState)
         {
@@ -231,7 +275,20 @@ public class DogEnemy : MonoBehaviour
                 agent.SetDestination(sleepSpot);
                 SetAnimation("isWalk", true);
                 break;
-
+            case DogState.Investigating:
+                agent.speed = investigationSpeed;
+                agent.isStopped = false;
+                NavMeshHit hit;
+                if(NavMesh.SamplePosition(noiseInvestigationTarget, out hit, 2f, NavMesh.AllAreas))
+                {
+                    agent.SetDestination(hit.position);
+                }
+                else
+                {
+                    agent.SetDestination(noiseInvestigationTarget);
+                }
+                SetAnimation("isWalk", true);
+                break;
         }
     }
     private void CheckForPlayer()
@@ -241,17 +298,23 @@ public class DogEnemy : MonoBehaviour
             Debug.LogError("DogEnemy: THERE IS NO PLAYER");
         }
 
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        float detectionRadius = currentState == DogState.Sleeping ? sleepDetectionRadius : walkDetectionRadius;
-
-        if(distanceToPlayer <= detectionRadius)
+        float dist = Vector3.Distance(transform.position, player.position);
+        if(dist < proximitySenseRadius)
         {
-            RaycastHit hit;
-            Vector3 directionToPlayer = (player.position - transform.position).normalized;
+            TransitionToState(DogState.Chasing);
+            return;
+        }
+        float detectionRadius = currentState == DogState.Sleeping ? sleepDetectionRadius : walkDetectionRadius;
+        if(dist <= detectionRadius)
+        {
+            Vector3 targetPosition = player.position + Vector3.up;
+            Vector3 origin = transform.position + Vector3.up;
+            Vector3 directionToPlayer = (targetPosition - origin).normalized;
 
-            if(Physics.Raycast(transform.position + Vector3.up, directionToPlayer, out hit, detectionRadius))
+            RaycastHit hit;
+            if(Physics.Raycast(origin, directionToPlayer, out hit, detectionRadius, detectionMask))
             {
-                if(hit.transform == player)
+                if(hit.transform == player || hit.transform.IsChildOf(player))
                 {
                     TransitionToState(DogState.Chasing);
                 }
@@ -267,32 +330,31 @@ public class DogEnemy : MonoBehaviour
         }
 
         var activeNoises = NoiseManager.Instance.GetActiveNoises();
+        float loudestHeardIntensity = 0f;
+        NoiseManager.NoiseEvent bestNoise = null;
 
         foreach(var noise in activeNoises)
         {
             float distance = Vector3.Distance(transform.position, noise.position);
 
-            if(distance <= noise.radius)
+            if(distance > hearingRadius) continue;
+            if(distance > noise.radius) continue;
+            float hearingIntensity = noise.GetCurrentIntensity() * (1 - (distance / noise.radius));
+            if(hearingIntensity > loudestHeardIntensity)
             {
-                float hearingIntensity = noise.intensity * (1 - (distance / noise.radius));
-
-                // Gotta add some variables in the place of 40 and 30 but for now just leave it
-                float wakeThreshold = currentState == DogState.Sleeping ? 40f : 30f;
-
-                if(hearingIntensity >= wakeThreshold)
-                {
-                    if(Vector3.Distance(transform.position, player.position) <= chaseRadius)
-                    {
-                        TransitionToState(DogState.Chasing);
-                    }
-                    else if(currentState == DogState.Sleeping)
-                    {
-                        TransitionToState(DogState.Idle);
-                    }
-                }
+                loudestHeardIntensity = hearingIntensity;
+                bestNoise = noise;
             }
         }
-
+        if(bestNoise != null)
+        {
+           if(currentState == DogState.Investigating && Vector3.Distance(noiseInvestigationTarget, bestNoise.position) < 1f)
+            {
+                return;
+            } 
+            noiseInvestigationTarget = bestNoise.position;
+            TransitionToState(DogState.Investigating);
+        }
     }
     private void SetRandomWanderDestination()
     {
@@ -338,6 +400,8 @@ public class DogEnemy : MonoBehaviour
 
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(sleepPos, wanderRadius);
+        Gizmos.color = Color.magenta;
+        Gizmos.DrawWireSphere(transform.position, hearingRadius);
 
         Gizmos.color = currentState == DogState.Sleeping ? Color.yellow : Color.red;
         float detectionRadius = currentState == DogState.Sleeping ? sleepDetectionRadius : walkDetectionRadius;

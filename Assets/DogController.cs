@@ -29,7 +29,7 @@ public class DogController : MonoBehaviour
     private void Update()
     {
         playerInSightRange = Physics.CheckSphere(transform.position, sightRange, playerLayer);
-        playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, groundLayer);
+        playerInAttackRange = Physics.CheckSphere(transform.position, attackRange, playerLayer);
         if(!playerInSightRange && !playerInAttackRange) Patroling();
         if(playerInSightRange && !playerInAttackRange) ChasePlayer();
         //if(playerInAttackRange && playerInSightRange) AttackPlayer();
