@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,26 +6,33 @@ public class NoiseManager : MonoBehaviour
 {
     public static NoiseManager Instance;
 
-    [Header("Noise Settings")]
-    [SerializeField] private float maxNoiseLevel = 100f;
-    [SerializeField] private float noiseDecayRate = 5f;
+    public class NoiseEvent
+    {
+        public Vector3 position;
+        public float intensity;
+        public float radius;
+        public float timeCreated;
+        public float duration;
 
-    private float currentNoiseLevel = 0f;
+        public NoiseEvent(Vector3 pos, float intense, float rad, float dur)
+        {
+            position = pos;
+            intensity = intense;
+            radius = rad;
+            duration = dur;
+            timeCreated = Time.time;
+        }
+        public bool IsExpired()
+        {
+            return Time.time - timeCreated >= duration;
+        }
+    }
 
-    [Header("Noise Threshold")]
-    [SerializeField] private float alertThreshold = 30f;
-    [SerializeField] private float investigateThreshold = 60f;
-    [SerializeField] private float chaseThreshold = 80f;   
-
-    public float CurrentNoiseLevel => currentNoiseLevel;
-    public float NoisePercentage => currentNoiseLevel / maxNoiseLevel;
-
-    [Header("UI and Display")]
-    public Slider noiseSlider;
+    [SerializeField] private List<NoiseEvent> activeNoises = new List<NoiseEvent>();
 
     void Awake()
     {
-        if(Instance == null)
+        if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
@@ -36,16 +44,16 @@ public class NoiseManager : MonoBehaviour
     }
     void Update()
     {
-        if(currentNoiseLevel > 0)
-        {
-            currentNoiseLevel -= noiseDecayRate * Time.deltaTime;
-            currentNoiseLevel = Mathf.Max(0, currentNoiseLevel);
-        }
-        noiseSlider.value = currentNoiseLevel;
+        activeNoises.RemoveAll(noise => noise.IsExpired());
     }
-    public void AddNoise(float amount)
+    public void MakeNoise(Vector3 position, float intensity, float radius, float duration = 2f)
     {
-        currentNoiseLevel += amount;
-        currentNoiseLevel = Mathf.Clamp(currentNoiseLevel, 0, maxNoiseLevel);
+        NoiseEvent newNoise = new NoiseEvent(position, intensity, radius, duration);
+        activeNoises.Add(newNoise);
+        // NotifyEnemies(newNoise);
+    }
+    public List<NoiseEvent> GetActiveNoises()
+    {
+        return activeNoises;
     }
 }

@@ -4,8 +4,8 @@ public class NoiseMaker : MonoBehaviour
 {
     [Header("Noise")]
     public float noiseIntensity;
-    //private float noiseRadius = 15f;
-    //private float noiseDuration = 3f;
+    private float noiseRadius = 15f;
+    private float noiseDuration = 3f;
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -18,7 +18,7 @@ public class NoiseMaker : MonoBehaviour
     {
         if(NoiseManager.Instance != null)
         {
-            NoiseManager.Instance.AddNoise(noiseIntensity);
+            NoiseManager.Instance.MakeNoise(transform.position, noiseIntensity, noiseRadius, noiseDuration);
         }
     }
 }
