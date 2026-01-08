@@ -26,10 +26,26 @@ public class NoiseManager : MonoBehaviour
         {
             return Time.time - timeCreated >= duration;
         }
+        public float GetCurrentIntensity()
+        {
+            float timeAlive = Time.time - timeCreated;
+            float fadeAmount = 1f - (timeAlive / duration);
+            return intensity * Mathf.Max(0, fadeAmount);
+        }
     }
 
     [SerializeField] private List<NoiseEvent> activeNoises = new List<NoiseEvent>();
 
+    [Header("Noise Settings")]
+    [SerializeField] private float maxNoiseLevel = 100f;
+
+    [Header("All the UI stuff")]
+    [SerializeField] private Slider noiseSlider;
+    [SerializeField] private Transform player;
+    [SerializeField] private float maxDistanceForUI = 30f;
+
+    private float currentDisplayedNoise = 0f;
+    [SerializeField] private float nosieDecaySpeed = 50f;
     void Awake()
     {
         if (Instance == null)
@@ -45,6 +61,40 @@ public class NoiseManager : MonoBehaviour
     void Update()
     {
         activeNoises.RemoveAll(noise => noise.IsExpired());
+        UpdateNoiseUI();
+    }
+    private void UpdateNoiseUI()
+    {
+        float targetNoise = CalculateCurrentNoiseLevel();
+
+        if(targetNoise > currentDisplayedNoise)
+        {
+            currentDisplayedNoise = targetNoise;
+        }
+        else
+        {
+            currentDisplayedNoise = Mathf.MoveTowards(currentDisplayedNoise, targetNoise, nosieDecaySpeed * Time.deltaTime);
+        }
+        noiseSlider.value = currentDisplayedNoise / maxNoiseLevel;
+    }
+    private float CalculateCurrentNoiseLevel()
+    {
+        float loudestNoise = 0f;
+        foreach(var noise in activeNoises)
+        {
+            float distance = Vector3.Distance(player.position, noise.position);
+            if(distance <= maxDistanceForUI)
+            {
+                float distanceFalloff = 1f - (distance / maxDistanceForUI);
+                float perceivedIntensity = noise.GetCurrentIntensity() * distanceFalloff;
+
+                if(perceivedIntensity > loudestNoise)
+                {
+                    loudestNoise = perceivedIntensity;
+                }
+            }
+        }
+        return loudestNoise;
     }
     public void MakeNoise(Vector3 position, float intensity, float radius, float duration = 2f)
     {
@@ -55,5 +105,9 @@ public class NoiseManager : MonoBehaviour
     public List<NoiseEvent> GetActiveNoises()
     {
         return activeNoises;
+    }
+    public float GetCurrentNoiseLevel()
+    {
+        return currentDisplayedNoise;
     }
 }

@@ -48,6 +48,7 @@ public class DogEnemy : MonoBehaviour
     private float lastBarkTime;
     private float stateTimer;
     private Vector3 currentWanderTarget;
+    private float targetStateDuration;
 
     private enum DogState
     {
@@ -116,7 +117,7 @@ public class DogEnemy : MonoBehaviour
         }
 
         // This for the random waking up during the night
-        if(stateTimer >= minSleepDuration)
+        if(stateTimer >= targetStateDuration)
         {
             if(Random.value < 0.1f * Time.deltaTime)
             {
@@ -126,7 +127,8 @@ public class DogEnemy : MonoBehaviour
     }
     private void UpdateIdle()
     {
-        if(stateTimer >= Random.Range(minIdleDuration, maxIdleDuration))
+
+        if(stateTimer >= targetStateDuration)
         {
             if(Random.value < sleepChance)
             {
@@ -202,10 +204,12 @@ public class DogEnemy : MonoBehaviour
             case DogState.Sleeping:
                 agent.isStopped = true;
                 SetAnimation("isSleep", true);
+                targetStateDuration = Random.Range(minSleepDuration, maxSleepDuration);
                 break;
             case DogState.Idle:
                 agent.isStopped = true;
                 SetAnimation("isIdle", true);
+                targetStateDuration = Random.Range(minIdleDuration, maxIdleDuration);
                 break;
 
             case DogState.Walking:  
@@ -213,6 +217,11 @@ public class DogEnemy : MonoBehaviour
                 agent.isStopped = false;
                 SetRandomWanderDestination();
                 SetAnimation("isWalk", true);
+                break;
+            case DogState.Chasing:
+                agent.speed = chaseSpeed;
+                agent.isStopped = false;
+                SetAnimation("isRun", true);
                 Bark();
                 lastBarkTime = Time.time;
                 break;
@@ -322,7 +331,29 @@ public class DogEnemy : MonoBehaviour
         // Sleep spot
         Gizmos.color = Color.blue;
         Vector3 sleepPos = Application.isPlaying ? sleepSpot : transform.position + sleepSpotOffset;
-        Gizmos.DrawWireSphere(sleepPos, 0.5f);
+        Gizmos.DrawWireSphere(sleepPos, 2f);
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireSphere(transform.position, chaseRadius);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(sleepPos, wanderRadius);
+
+        Gizmos.color = currentState == DogState.Sleeping ? Color.yellow : Color.red;
+        float detectionRadius = currentState == DogState.Sleeping ? sleepDetectionRadius : walkDetectionRadius;
+        Gizmos.DrawWireSphere(transform.position, detectionRadius);
+
+        if(currentState == DogState.Chasing)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(transform.position, chaseRadius);
+        }
+        if(enableProximityWakeup && currentState == DogState.Sleeping)
+        {
+            Gizmos.color = new Color(1f, 0.5f, 0f, 0.3f);
+            Gizmos.DrawWireSphere(transform.position, proximityWakeupRadius);
+        }
+
     }
 
 }
