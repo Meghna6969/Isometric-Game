@@ -31,6 +31,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dashSpeed = 15;
     [SerializeField] private float dashDuration = 0.2f;
     [SerializeField] private float dashCooldown = 1f;
+    [SerializeField] private float offsetAngle;
 
     [Header("Ground Check and Other Misc")]
     [SerializeField] private LayerMask groundLayer;
@@ -89,7 +90,7 @@ public class PlayerController : MonoBehaviour
             isDashing = true;
             dashTimer = dashDuration;
             dashCooldownTimer = dashCooldown;
-            var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 0, 0));
+            var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, offsetAngle, 0));
             dashDirection = matrix.MultiplyPoint3x4(input).normalized;
         }
     }
@@ -209,7 +210,7 @@ public class PlayerController : MonoBehaviour
     {
         if (input != Vector3.zero)
         {
-            var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 0, 0));
+            var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, offsetAngle, 0));
             var skewedInput = matrix.MultiplyPoint3x4(input);
 
            var targetRotation = Quaternion.LookRotation(skewedInput, Vector3.up);
@@ -237,7 +238,7 @@ public class PlayerController : MonoBehaviour
                 targetSpeed = isSprinting ? speed * sprintMultiplier : speed;
                 currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, currentAcceleration * Time.deltaTime);
                 
-                var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, 0, 0));
+                var matrix = Matrix4x4.Rotate(Quaternion.Euler(0, offsetAngle, 0));
                 var moveDirection = matrix.MultiplyPoint3x4(input).normalized;
 
                 currentVelocity = Vector3.Lerp(currentVelocity, moveDirection * currentSpeed, currentAcceleration * Time.deltaTime);
