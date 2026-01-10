@@ -25,8 +25,9 @@ public class PlayerPickup : MonoBehaviour
     public GameObject targetIndicator;
     public Transform throwStartPoint;
 
-    [Header("UI")]
+    [Header("UI & other vital references")]
     public TextMeshProUGUI pickupPromptText;
+    [SerializeField] private GameManager gameManager;
     private GameObject heldObject;
     private Rigidbody heldObjectRb;
     private Collider heldPhysicsCollider;
@@ -53,8 +54,19 @@ public class PlayerPickup : MonoBehaviour
         dropAction?.Disable();
         throwAction?.Disable();
     }
+    void Awake()
+    {
+        if(pickupPromptText == null)
+        {
+            pickupPromptText = gameManager.infoText;
+        }
+    }
     void Start()
     {
+        if(pickupPromptText == null)
+        {
+            pickupPromptText = gameManager.infoText;
+        }
         mainCamera = Camera.main;
         pickupPromptText.gameObject.SetActive(false);
         trajectoryLine.enabled = false;

@@ -65,11 +65,23 @@ public class PickupObject : MonoBehaviour
     {
        isBeingHeld = true;
        triggerCollider.enabled = false;
+
+       NoiseMaker noiseMaker = GetComponent<NoiseMaker>();
+       if(noiseMaker != null)
+        {
+            noiseMaker.OnPickedUp();
+        }
     }
     public void OnThrown()
     {
         isBeingHeld = false;
         triggerCollider.enabled = false;
+
+        NoiseMaker noiseMaker = GetComponent<NoiseMaker>();
+        if(noiseMaker != null)
+        {
+            noiseMaker.OnThrown();
+        }
     }
     public void OnDropped()
     {

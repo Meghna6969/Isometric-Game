@@ -8,6 +8,7 @@ public class NoiseMaker : MonoBehaviour
     private float noiseDuration = 3f;
     [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip clip;
+    private bool hasBeenThrown = false;
 
     private void OnCollisionEnter(Collision collision)
     {
@@ -18,7 +19,7 @@ public class NoiseMaker : MonoBehaviour
     }
     void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.CompareTag("Ground"))
+        if (other.gameObject.CompareTag("Ground") && hasBeenThrown)
         {
             MakeNoise();
         }
@@ -27,10 +28,18 @@ public class NoiseMaker : MonoBehaviour
     {
         if(NoiseManager.Instance != null)
         {
-            audioSource.pitch = Random.Range(0.5f, 1.5f);
+            audioSource.pitch = Random.Range(0.8f, 1.5f);
             audioSource.clip = clip;
             audioSource.Play();
             NoiseManager.Instance.MakeNoise(transform.position, noiseIntensity, noiseRadius, noiseDuration);
         }
+    }
+    public void OnThrown()
+    {
+        hasBeenThrown = true;
+    }
+    public void OnPickedUp()
+    {
+        hasBeenThrown = false;
     }
 }

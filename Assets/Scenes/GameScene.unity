@@ -9201,6 +9201,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   noiseIntensity: 30
+  audioSource: {fileID: 0}
+  clip: {fileID: 0}
 --- !u!1 &1527336078 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8387854135262613240, guid: 94dee45fe843aa543b410fcaa3596d89, type: 3}
@@ -14665,7 +14667,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6185515632507217285, guid: 26c4a2bb7d0a9d443af9277f2e5cfe34, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 5.300001
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 6185515632507217285, guid: 26c4a2bb7d0a9d443af9277f2e5cfe34, type: 3}
       propertyPath: m_LocalRotation.w
