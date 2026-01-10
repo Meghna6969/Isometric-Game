@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using UnityEngine.InputSystem;
+using System.Collections;
 
 public class PlayerPickup : MonoBehaviour
 {
@@ -335,6 +336,21 @@ public class PlayerPickup : MonoBehaviour
         if(playerCollider != null && heldPhysicsCollider != null)
         {
             Physics.IgnoreCollision(heldPhysicsCollider, playerCollider, true);
+            Collider objectCol = heldPhysicsCollider;
+            StartCoroutine(ReenableCollisionAfterDelay(objectCol, playerCollider));
+        }
+
+        heldObject = null;
+        heldObjectRb = null;
+        heldPhysicsCollider = null;
+        heldTriggerCollider = null;
+    }
+    private IEnumerator ReenableCollisionAfterDelay(Collider objectCol, Collider playerCol)
+    {
+        yield return new WaitForSeconds(ignoreCollisionTime);
+        if(objectCol != null && playerCol != null)
+        {
+            Physics.IgnoreCollision(objectCol, playerCol, false);
         }
     }
 }

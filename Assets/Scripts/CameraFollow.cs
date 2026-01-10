@@ -21,7 +21,11 @@ public class CameraFollow : MonoBehaviour
         if (other.gameObject.CompareTag("Wall"))
         {
             Debug.Log("Collided with the wall");
-            other.gameObject.GetComponent<MeshRenderer>().enabled = false;
+            Renderer renderer = other.gameObject.GetComponent<Renderer>();
+            Color color = renderer.material.color;
+            color.a = 0.2f;
+
+            renderer.material.color = color;
         }
     }
     private void OnTriggerExit(Collider other)
@@ -29,7 +33,10 @@ public class CameraFollow : MonoBehaviour
         if (other.gameObject.CompareTag("Wall"))
         {
             Debug.Log("Exited collision with the wall");
-            other.gameObject.GetComponent<MeshRenderer>().enabled = true;
+            Renderer renderer = other.gameObject.GetComponent<Renderer>();
+            Color color = renderer.material.color;
+            color.a = 1f;
+            renderer.material.color = color;
         }
     }
 }
