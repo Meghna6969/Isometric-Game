@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Dog
   - Wall
+  - Ground
   layers:
   - Default
   - TransparentFX

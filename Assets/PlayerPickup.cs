@@ -134,21 +134,23 @@ public class PlayerPickup : MonoBehaviour
         if(Physics.Raycast(ray, out hit, 1000f, groundLayer))
         {
             Vector3 start = GetLineStartPosition();
-            Vector3 flat = new Vector3(hit.point.x - start.x, 0f, hit.point.z - start.z);
-            Vector3 clampedXZ;
+            Vector3 toTarget = hit.point - start;
+            Vector3 horizontalDirection = new Vector3 (toTarget.x, 0f, toTarget.z);
+            float horizontalDistance = horizontalDirection.magnitude;
 
-            if(flat.magnitude > maxThrowDistance)
+            if(horizontalDistance > maxThrowDistance)
             {
-                clampedXZ = start + flat.normalized * maxThrowDistance;
-                Vector3 fromAbove = clampedXZ + Vector3.up * 100f;
+                horizontalDirection = horizontalDirection.normalized * maxThrowDistance;
 
-                if(Physics.Raycast(fromAbove, Vector3.down, out var groundHit, 200f, groundLayer))
+                Vector3 clampedWorldPos = new Vector3(start.x + horizontalDirection.x, start.y, start.z + horizontalDirection.z);
+
+                if(Physics.Raycast(clampedWorldPos + Vector3.up * 100f, Vector3.down, out var groundHit, 200f, groundLayer))
                 {
                     targetPosition = groundHit.point;
                 }
                 else
                 {
-                    targetPosition = new Vector3(clampedXZ.x, hit.point.y, clampedXZ.z);
+                    targetPosition = new Vector3(clampedWorldPos.x, hit.point.y, clampedWorldPos.z);
                 }
             }
             else
@@ -200,7 +202,7 @@ public class PlayerPickup : MonoBehaviour
                     if(Physics.Raycast(prevPoint, segment.normalized, out var hit, dist, groundLayer))
                     {
                         hitPoint = hit.point;
-                        for(int j = i; i < trajectoryResolution; j++)
+                        for(int j = i; j < trajectoryResolution; j++)
                         {
                             trajectoryLine.SetPosition(j, hitPoint);
                         }

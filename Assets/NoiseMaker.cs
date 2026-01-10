@@ -16,6 +16,13 @@ public class NoiseMaker : MonoBehaviour
             MakeNoise();
         }
     }
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag("Ground"))
+        {
+            MakeNoise();
+        }
+    }
     void MakeNoise()
     {
         if(NoiseManager.Instance != null)

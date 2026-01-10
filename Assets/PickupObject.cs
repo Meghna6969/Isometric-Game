@@ -64,13 +64,16 @@ public class PickupObject : MonoBehaviour
     public void OnPickedUp()
     {
        isBeingHeld = true;
+       triggerCollider.enabled = false;
     }
     public void OnThrown()
     {
         isBeingHeld = false;
+        triggerCollider.enabled = false;
     }
     public void OnDropped()
     {
         isBeingHeld = false;
+        triggerCollider.enabled = true;
     }
 }
