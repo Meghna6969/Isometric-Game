@@ -57,8 +57,7 @@ QualitySettings:
     terrainBillboardStart: 50
     terrainFadeLength: 5
     terrainMaxTrees: 50
-    excludedTargetPlatforms:
-    - Standalone
+    excludedTargetPlatforms: []
   - serializedVersion: 4
     name: PC
     pixelLightCount: 2
@@ -113,6 +112,7 @@ QualitySettings:
     excludedTargetPlatforms:
     - Android
     - iPhone
+    - Standalone
   - serializedVersion: 4
     name: Level 2
     pixelLightCount: 2
