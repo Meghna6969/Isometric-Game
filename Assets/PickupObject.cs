@@ -4,14 +4,13 @@ using UnityEngine.InputSystem;
 
 public class PickupObject : MonoBehaviour
 {
+    [Header("Item Info")]
+    public string itemName = ""; // Gotta assign this in the inspector
+    public Sprite itemIcon;
     [Header("Pickup Prompt")]
     public string pickupPrompt = "Press E to pick up";
     public Collider triggerCollider;
     public Collider physicsCollider;
-
-    [Header("Damage Settings")]
-    public float throwDamage = 50f;
-    public float damageVelocityThreshold = 2f;
 
     private bool isInRange = false;
     private PlayerPickup playerPickup;
