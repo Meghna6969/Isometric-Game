@@ -19,9 +19,72 @@ public class Inventory
         if (item.isStackable())
         {
             bool itemAlreadyInInventory = false;
-            foreach(Item inventoryItem)
+            foreach(Item inventoryItem in itemList)
+            {
+                if(inventoryItem.itemType == item.itemType)
+                {
+                    inventoryItem.amount += item.amount;
+                    itemAlreadyInInventory = true;
+                    break;
+                }
+            }
+            if (!itemAlreadyInInventory)
+            {
+                itemList.Add(item);
+            }
         }
+        else
+        {
+            itemList.Add(item);
+        }
+        onItemListChanged?.Invoke();
     }
+    public void RemoveItem(Item item)
+    {
+        if (item.isStackable())
+        {
+            foreach(Item inventoryItem in itemList)
+            {
+                if(inventoryItem.itemType == item.itemType)
+                {
+                    inventoryItem.amount -= item.amount;
+                    if(inventoryItem.amount <= 0)
+                    {
+                        itemList.Remove(inventoryItem);
+                    }
+                    break;
+                }
+            }
+        }
+        else
+        {
+            itemList.Remove(item);
+        }
+        onItemListChanged?.Invoke();
+    }
+    public bool HasItem(Item.ItemType itemType)
+    {
+        foreach(Item item in itemList)
+        {
+            if(item.itemType == itemType)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    public int GetItemCount(Item.ItemType itemType)
+    {
+        foreach(Item item in itemList)
+        {
+            if(item.itemType == itemType)
+            {
+                return item.amount;
+            }
+        }
+        return 0;
+    }
+
     public List<Item> GetItemList()
     {
         return itemList;

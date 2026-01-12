@@ -28,21 +28,26 @@ public class PlayerPickup : MonoBehaviour
     [Header("UI & other vital references")]
     public TextMeshProUGUI pickupPromptText;
     [SerializeField] private GameManager gameManager;
+
+    [Header("Inventory")]
+    [SerializeField] private Inventory inventory;
+    [SerializeField] private InventoryUI uiInventory;
+    [SerializeField] private Transform inventoryStorage;
     private GameObject heldObject;
     private Rigidbody heldObjectRb;
     private Collider heldPhysicsCollider;
     private Collider heldTriggerCollider;
+    private int currentInventoryIndex = -1;
+
     private InputAction throwAction;
     private InputAction dropAction;
+    private InputAction[] numberKeys;
+
     private Camera mainCamera;
     private bool isAiming = false;
     private Vector3 targetPosition;
     private Vector3 plannedVelocity;
     private float plannedFlightTime;
-
-    [Header("Inventory")]
-    [SerializeField] private Inventory inventory;
-    [SerializeField] private InventoryUI uiInventory;
 
     void OnEnable()
     {
@@ -52,6 +57,14 @@ public class PlayerPickup : MonoBehaviour
         throwAction = new InputAction(type: InputActionType.Button);
         throwAction.AddBinding("<Mouse>/leftButton");
         throwAction.Enable();
+
+        numberKeys = new InputAction[6];
+        for(int i = 0; i < 6; i++)
+        {
+            numberKeys[i] = new InputAction(type:InputActionType.Button);
+            numberKeys[i].AddBinding($"<Keyboard>/{i + 1}");
+            numberKeys[i].Enable();
+        }
     }
     void OnDisable()
     {
@@ -66,6 +79,14 @@ public class PlayerPickup : MonoBehaviour
         }
         inventory = new Inventory();
         uiInventory.SetInventory(inventory);
+
+        if(inventoryStorage == null)
+        {
+            GameObject storage = new GameObject("InventoryStorage");
+            storage.transform.SetParent(transform);
+            storage.transform.localPosition = new Vector3(0, -1000, 0);
+            inventoryStorage = storage.transform;
+        }
     }
     void Start()
     {
@@ -92,7 +113,10 @@ public class PlayerPickup : MonoBehaviour
     }
     public void PickupObject(GameObject obj, Collider physicsCollider, Collider triggerCollider)
     {
-        if(heldObject != null) return;
+        if(heldObject != null)
+        {
+            StoreCurrentItem();
+        }
         heldObject = obj;
         heldObjectRb= obj.GetComponent<Rigidbody>();
         heldPhysicsCollider = physicsCollider;
@@ -115,11 +139,34 @@ public class PlayerPickup : MonoBehaviour
         if(pickupObj != null)
         {
             pickupObj.OnPickedUp();
+
+            Item.ItemType itemType = GetItemTypeFromName(pickupObj.itemName);
+            Item newItem = new Item
+            {
+                itemType = itemType,
+                amount = 1,
+                gameObject = obj,
+                physicsCollider = physicsCollider,
+                triggerCollider = triggerCollider,
+            };
+
+            inventory.AddItem(newItem);
+            currentInventoryIndex = inventory.GetItemList().Count - 1;
+
+            uiInventory.SetInventory(inventory);
+            uiInventory.HighlightSlot(currentInventoryIndex);
         }
         HidePickupPrompt();
     }
     void Update()
     {
+        for(int i = 0; i < numberKeys.Length; i++)
+        {
+            if (numberKeys[i].WasPressedThisFrame())
+            {
+                SelectInventorySlot(i);
+            }
+        }
         if(heldObject != null && dropAction.WasPressedThisFrame())
         {
             DropObject();
@@ -136,6 +183,59 @@ public class PlayerPickup : MonoBehaviour
         {
             ThrowObject();
         }
+    }
+    private void SelectInventorySlot(int index)
+    {
+        var itemList = inventory.GetItemList();
+        if(index >= itemList.Count)
+        {
+            return;
+        }
+        if(index == currentInventoryIndex)
+        {
+            return;
+        }
+        if(heldObject != null)
+        {
+            StoreCurrentItem();
+        }
+        Item selectedItem = itemList[index];
+        EquipItem(selectedItem, index);
+
+        uiInventory.HighlightSlot(index);
+    }
+    private void StoreCurrentItem()
+    {
+        if(heldObject == null) return;
+        heldObject.transform.SetParent(inventoryStorage);
+        heldObject.transform.localPosition = Vector3.zero;
+        heldObject.SetActive(false);
+
+        heldObject = null;
+        heldObjectRb = null;
+        heldPhysicsCollider = null;
+        heldTriggerCollider = null;
+    }
+    private void EquipItem(Item item, int index)
+    {
+        if(item.gameObject == null) return;
+
+        heldObject = item.gameObject;
+        heldObjectRb = item.gameObject.GetComponent<Rigidbody>();
+        heldPhysicsCollider = item.physicsCollider;
+        heldTriggerCollider = item.triggerCollider;
+
+        heldObject.SetActive(true);
+        heldObject.transform.SetParent(holdPosition);
+        heldObject.transform.localPosition = positionOffset;
+        heldObject.transform.localRotation = Quaternion.Euler(rotationOffset);
+
+        if(heldObjectRb != null)
+        {
+            heldObjectRb.isKinematic = true;
+            heldObjectRb.useGravity = false;
+        }
+        currentInventoryIndex = index;
     }
     private void StartAiming()
     {
@@ -323,10 +423,13 @@ public class PlayerPickup : MonoBehaviour
         {
             heldTriggerCollider.enabled = true;
         }
+        RemoveCurrentItemFromInventory();
+        
         heldObject = null;
         heldObjectRb = null;
         heldPhysicsCollider = null;
         heldTriggerCollider = null;
+        
     }
     private void ThrowObject()
     {
@@ -359,11 +462,28 @@ public class PlayerPickup : MonoBehaviour
             Collider objectCol = heldPhysicsCollider;
             StartCoroutine(ReenableCollisionAfterDelay(objectCol, playerCollider));
         }
+        RemoveCurrentItemFromInventory();
 
         heldObject = null;
         heldObjectRb = null;
         heldPhysicsCollider = null;
         heldTriggerCollider = null;
+    }
+    private void RemoveCurrentItemFromInventory()
+    {
+        if(currentInventoryIndex < 0) return;
+        var itemList = inventory.GetItemList();
+        if(currentInventoryIndex < itemList.Count)
+        {
+            Item item = itemList[currentInventoryIndex];
+            inventory.RemoveItem(item);
+            uiInventory.SetInventory(inventory);
+
+            if(currentInventoryIndex >= itemList.Count)
+            {
+                currentInventoryIndex = itemList.Count - 1;
+            }
+        }
     }
     private IEnumerator ReenableCollisionAfterDelay(Collider objectCol, Collider playerCol)
     {
@@ -372,5 +492,14 @@ public class PlayerPickup : MonoBehaviour
         {
             Physics.IgnoreCollision(objectCol, playerCol, false);
         }
+    }
+
+    private Item.ItemType GetItemTypeFromName(string Name)
+    {
+        string nameLower = name.ToLower().Trim();
+
+        if(nameLower.Contains("squeaky")) return Item.ItemType.Squeaky;
+
+        return Item.ItemType.Squeaky; // I have nothing for default so like we gonna use this for now
     }
 }

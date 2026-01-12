@@ -10,6 +10,9 @@ public class Item
     }
     public ItemType itemType;
     public int amount;
+    public GameObject gameObject;
+    public Collider physicsCollider;
+    public Collider triggerCollider;
 
     public Sprite GetSprite()
     {
