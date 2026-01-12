@@ -1,3 +1,5 @@
+using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Item
@@ -8,4 +10,25 @@ public class Item
     }
     public ItemType itemType;
     public int amount;
+
+    public Sprite GetSprite()
+    {
+        switch (itemType)
+        {
+            default:
+            case ItemType.Squeaky: return ItemAssets.Instance.squeakySprite;
+        }
+    }
+    public String GetItemName()
+    {
+        switch (itemType)
+        {
+            case ItemType.Squeaky: return "Squeaky Toy";
+            default: return "Unknown";
+        }
+    }
+    public bool isStackable()
+    {
+        return itemType == ItemType.Squeaky;
+    }
 }

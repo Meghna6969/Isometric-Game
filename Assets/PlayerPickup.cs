@@ -40,6 +40,10 @@ public class PlayerPickup : MonoBehaviour
     private Vector3 plannedVelocity;
     private float plannedFlightTime;
 
+    [Header("Inventory")]
+    [SerializeField] private Inventory inventory;
+    [SerializeField] private InventoryUI uiInventory;
+
     void OnEnable()
     {
         dropAction = new InputAction(type: InputActionType.Button);
@@ -60,6 +64,8 @@ public class PlayerPickup : MonoBehaviour
         {
             pickupPromptText = gameManager.infoText;
         }
+        inventory = new Inventory();
+        uiInventory.SetInventory(inventory);
     }
     void Start()
     {
