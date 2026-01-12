@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
 
@@ -7,12 +8,19 @@ public class Item
     public enum ItemType
     {
         Squeaky,
+        Clock,
     }
     public ItemType itemType;
-    public int amount;
-    public GameObject gameObject;
-    public Collider physicsCollider;
-    public Collider triggerCollider;
+    public List<GameObject> objectInstances = new List<GameObject>();
+    public List<Collider> physicsColliders = new List<Collider>();
+    public List<Collider> triggerColliders = new List<Collider>();
+
+    public int amount => objectInstances.Count;
+
+    public GameObject GetPrimaryObject()
+    {
+        if(objectInstances.Count > 0) return objectInstances[0];
+    }
 
     public Sprite GetSprite()
     {
@@ -20,6 +28,7 @@ public class Item
         {
             default:
             case ItemType.Squeaky: return ItemAssets.Instance.squeakySprite;
+            case ItemType.Clock: return ItemAssets.Instance.clockSprite;
         }
     }
     public String GetItemName()
@@ -27,11 +36,12 @@ public class Item
         switch (itemType)
         {
             case ItemType.Squeaky: return "Squeaky Toy";
+            case ItemType.Clock: return "Alaram Clock";
             default: return "Unknown";
         }
     }
     public bool isStackable()
     {
-        return itemType == ItemType.Squeaky;
+        return true;
     }
 }

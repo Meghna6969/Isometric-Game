@@ -16,6 +16,8 @@ public class InventoryUI : MonoBehaviour
 
     private void Awake()
     {
+        // We getting one error about null reference here please ignore crossed checked with update its finding 
+        // the thing in start roughly
         itemSlotContainer = transform.Find("itemSlotContainer");
         itemSlotTemplate = itemSlotContainer.Find("itemSlotTemplate");
     }
@@ -65,6 +67,51 @@ public class InventoryUI : MonoBehaviour
             if(numberText != null)
             {
                 numberText.text = (i + 1).ToString();
+            }
+
+            /* Not sure if I want to places names of stuff on Inventory UI
+             But you do then uncomment this portion
+            TextMeshProUGUI nameText = itemSlotRectTransform.Find("nameText")?.GetComponent<TextMeshProUGUI>();
+            if(nameText != null)
+            {
+                nameText.text = item.GetItemName();
+            }*/
+            activeSlots.Add(itemSlotRectTransform.gameObject);
+            x++;
+            if(x > 5)
+            {
+                x = 0;
+                y++;
+            }
+        }
+
+        if(highlightedIndex >= 0 && highlightedIndex < activeSlots.Count)
+        {
+            Image bg = activeSlots[highlightedIndex].GetComponent<Image>();
+            if(bg != null)
+            {
+                bg.color = highlightColor;
+            }
+        }
+    }
+    public void HighlightSlot(int index)
+    {
+        highlightedIndex = index;
+        for(int i = 0; i < activeSlots.Count; i++)
+        {
+            Image bg = activeSlots[i].GetComponent<Image>();
+            if(bg != null)
+            {
+                bg.color = normalColor;
+            }
+        }
+
+        if(index >= 0 && index < activeSlots.Count)
+        {
+            Image bg = activeSlots[index].GetComponent<Image>();
+            if(bg != null)
+            {
+                bg.color = highlightColor;
             }
         }
     }

@@ -9,4 +9,5 @@ public class ItemAssets : MonoBehaviour
         Instance = this;
     }
     public Sprite squeakySprite;
+    public Sprite clockSprite;
 }
