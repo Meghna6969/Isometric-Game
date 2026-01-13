@@ -20,6 +20,8 @@ public class InventoryUI : MonoBehaviour
         // the thing in start roughly
         itemSlotContainer = transform.Find("itemSlotContainer");
         itemSlotTemplate = itemSlotContainer.Find("itemSlotTemplate");
+
+        itemSlotTemplate.gameObject.SetActive(false);
     }
     public void SetInventory(Inventory inventory)
     {
@@ -66,7 +68,7 @@ public class InventoryUI : MonoBehaviour
             TextMeshProUGUI numberText = itemSlotRectTransform.Find("numberText")?.GetComponent<TextMeshProUGUI>();
             if(numberText != null)
             {
-                numberText.text = (i + 1).ToString();
+                 numberText.text = item.amount.ToString();
             }
 
             /* Not sure if I want to places names of stuff on Inventory UI

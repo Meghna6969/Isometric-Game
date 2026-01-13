@@ -14,54 +14,48 @@ public class Inventory
     {
         onItemListChanged = callback;
     }
-    public void AddItem(Item item)
+    public void AddItem(Item newItem)
     {
-        if (item.isStackable())
+        if (newItem.isStackable())
         {
             bool itemAlreadyInInventory = false;
             foreach(Item inventoryItem in itemList)
             {
-                if(inventoryItem.itemType == item.itemType)
+                if(inventoryItem.itemType == newItem.itemType)
                 {
-                    inventoryItem.amount += item.amount;
+                    inventoryItem.objectInstances.AddRange(newItem.objectInstances);
+                    inventoryItem.physicsColliders.AddRange(newItem.physicsColliders);
+                    inventoryItem.triggerColliders.AddRange(newItem.triggerColliders);
                     itemAlreadyInInventory = true;
                     break;
                 }
             }
             if (!itemAlreadyInInventory)
             {
-                itemList.Add(item);
+                itemList.Add(newItem);
             }
         }
         else
         {
-            itemList.Add(item);
+            itemList.Add(newItem);
         }
         onItemListChanged?.Invoke();
     }
-    public void RemoveItem(Item item)
+    public void RemoveOneFromStack(Item item)
     {
-        if (item.isStackable())
+      if(item.objectInstances.Count > 0)
         {
-            foreach(Item inventoryItem in itemList)
-            {
-                if(inventoryItem.itemType == item.itemType)
-                {
-                    inventoryItem.amount -= item.amount;
-                    if(inventoryItem.amount <= 0)
-                    {
-                        itemList.Remove(inventoryItem);
-                    }
-                    break;
-                }
-            }
+            item.objectInstances.RemoveAt(0);
+            item.physicsColliders.RemoveAt(0);
+            item.triggerColliders.RemoveAt(0);
         }
-        else
+        if(item.amount <= 0)
         {
             itemList.Remove(item);
         }
         onItemListChanged?.Invoke();
     }
+    
     public bool HasItem(Item.ItemType itemType)
     {
         foreach(Item item in itemList)

@@ -20,6 +20,7 @@ public class Item
     public GameObject GetPrimaryObject()
     {
         if(objectInstances.Count > 0) return objectInstances[0];
+        return null;
     }
 
     public Sprite GetSprite()

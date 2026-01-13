@@ -78,7 +78,7 @@ public class PlayerPickup : MonoBehaviour
             pickupPromptText = gameManager.infoText;
         }
         inventory = new Inventory();
-        uiInventory.SetInventory(inventory);
+        if(uiInventory != null) uiInventory.SetInventory(inventory);
 
         if(inventoryStorage == null)
         {
@@ -101,7 +101,7 @@ public class PlayerPickup : MonoBehaviour
     }
     public void ShowPickupPrompt(string message)
     {
-        if(pickupPromptText != null && heldObject == null)
+        if(pickupPromptText != null)
         {
             pickupPromptText.text = message;
             pickupPromptText.gameObject.SetActive(true);
@@ -117,23 +117,19 @@ public class PlayerPickup : MonoBehaviour
         {
             StoreCurrentItem();
         }
-        heldObject = obj;
-        heldObjectRb= obj.GetComponent<Rigidbody>();
-        heldPhysicsCollider = physicsCollider;
-        heldTriggerCollider = triggerCollider;
+       obj.transform.SetParent(inventoryStorage);
+       obj.transform.localPosition = Vector3.zero;
+       obj.SetActive(false);
 
-        if(heldObjectRb != null)
+        physicsCollider.enabled = false;
+        triggerCollider.enabled = false;
+
+        Rigidbody rb = obj.GetComponent<Rigidbody>();
+        if(rb != null)
         {
-            heldObjectRb.isKinematic = true;
-            heldObjectRb.useGravity = false;
+            rb.isKinematic = true;
+            rb.useGravity = false;
         }
-        heldPhysicsCollider.enabled = false;
-        heldTriggerCollider.enabled = false;
-
-        obj.transform.SetParent(holdPosition);
-        obj.transform.localPosition = positionOffset;
-
-        obj.transform.localRotation = Quaternion.Euler(rotationOffset);
 
         PickupObject pickupObj = obj.GetComponent<PickupObject>();
         if(pickupObj != null)
@@ -144,19 +140,57 @@ public class PlayerPickup : MonoBehaviour
             Item newItem = new Item
             {
                 itemType = itemType,
-                amount = 1,
-                gameObject = obj,
-                physicsCollider = physicsCollider,
-                triggerCollider = triggerCollider,
             };
+            newItem.objectInstances.Add(obj);
+            newItem.physicsColliders.Add(physicsCollider);
+            newItem.triggerColliders.Add(triggerCollider);
 
             inventory.AddItem(newItem);
-            currentInventoryIndex = inventory.GetItemList().Count - 1;
+
+            int count = inventory.GetItemCount(itemType);
+            Debug.Log($"Picked up {itemType}. New Stack Count: {count}");
+
+            RefreshInventoryIndex(itemType);
+
+            EquipItem(inventory.GetItemList()[currentInventoryIndex], currentInventoryIndex);
 
             uiInventory.SetInventory(inventory);
             uiInventory.HighlightSlot(currentInventoryIndex);
         }
         HidePickupPrompt();
+    }
+    private void EquipItem(Item item, int index)
+    {
+        if(item.objectInstances.Count == 0) return;
+        GameObject objToEquip = item.objectInstances[0];
+        heldObject = objToEquip;
+        heldObjectRb = heldObject.GetComponent<Rigidbody>();
+        heldPhysicsCollider = item.physicsColliders[0];
+        heldTriggerCollider = item.triggerColliders[0];
+
+        heldObject.SetActive(true);
+        heldObject.transform.SetParent(holdPosition);
+        heldObject.transform.localPosition = positionOffset;
+        heldObject.transform.localRotation = Quaternion.Euler(rotationOffset);
+
+        if(heldObjectRb != null)
+        {
+            heldObjectRb.isKinematic = true;
+            heldObjectRb.useGravity = false;
+        }
+        currentInventoryIndex = index;
+    }
+    private void RefreshInventoryIndex(Item.ItemType type)
+    {
+        var list = inventory.GetItemList();
+        for(int i = 0; i < list.Count; i++)
+        {
+            if(list[i].itemType == type)
+            {
+                currentInventoryIndex = i;
+                return;
+            }
+        }
     }
     void Update()
     {
@@ -215,27 +249,6 @@ public class PlayerPickup : MonoBehaviour
         heldObjectRb = null;
         heldPhysicsCollider = null;
         heldTriggerCollider = null;
-    }
-    private void EquipItem(Item item, int index)
-    {
-        if(item.gameObject == null) return;
-
-        heldObject = item.gameObject;
-        heldObjectRb = item.gameObject.GetComponent<Rigidbody>();
-        heldPhysicsCollider = item.physicsCollider;
-        heldTriggerCollider = item.triggerCollider;
-
-        heldObject.SetActive(true);
-        heldObject.transform.SetParent(holdPosition);
-        heldObject.transform.localPosition = positionOffset;
-        heldObject.transform.localRotation = Quaternion.Euler(rotationOffset);
-
-        if(heldObjectRb != null)
-        {
-            heldObjectRb.isKinematic = true;
-            heldObjectRb.useGravity = false;
-        }
-        currentInventoryIndex = index;
     }
     private void StartAiming()
     {
@@ -425,11 +438,6 @@ public class PlayerPickup : MonoBehaviour
         }
         RemoveCurrentItemFromInventory();
         
-        heldObject = null;
-        heldObjectRb = null;
-        heldPhysicsCollider = null;
-        heldTriggerCollider = null;
-        
     }
     private void ThrowObject()
     {
@@ -463,11 +471,6 @@ public class PlayerPickup : MonoBehaviour
             StartCoroutine(ReenableCollisionAfterDelay(objectCol, playerCollider));
         }
         RemoveCurrentItemFromInventory();
-
-        heldObject = null;
-        heldObjectRb = null;
-        heldPhysicsCollider = null;
-        heldTriggerCollider = null;
     }
     private void RemoveCurrentItemFromInventory()
     {
@@ -476,12 +479,17 @@ public class PlayerPickup : MonoBehaviour
         if(currentInventoryIndex < itemList.Count)
         {
             Item item = itemList[currentInventoryIndex];
-            inventory.RemoveItem(item);
+            inventory.RemoveOneFromStack(item);
             uiInventory.SetInventory(inventory);
 
-            if(currentInventoryIndex >= itemList.Count)
+            if(item.amount > 0)
             {
-                currentInventoryIndex = itemList.Count - 1;
+                EquipItem(item, currentInventoryIndex);
+            }
+            else
+            {
+                heldObject = null;
+                currentInventoryIndex = -1;
             }
         }
     }
@@ -499,6 +507,7 @@ public class PlayerPickup : MonoBehaviour
         string nameLower = name.ToLower().Trim();
 
         if(nameLower.Contains("squeaky")) return Item.ItemType.Squeaky;
+        if(nameLower.Contains("clock")) return Item.ItemType.Clock;
 
         return Item.ItemType.Squeaky; // I have nothing for default so like we gonna use this for now
     }
